@@ -1,0 +1,5 @@
+The wxErlang library (Erlang bindings for wxWidgets) is now official part of Erlang/OTP. 
+The library itself exposes a low-level imperative interface. 
+The wxi library provides a functional-style interface on top of wxErlang. 
+It heavily borrows ideas from Haskell GUI library Fudgets. 
+
