@@ -1,9 +1,6 @@
 %% @author Dmitry Golubovsky <golubovsky@gmail.com>
 %% @version 0.1
 
-%% @doc Composable GUI library on top of wxErlang. Based on ideas found in Fudgets.
-%% @reference See <a href="http://www.md.chalmers.se/Cs/Research/Functional/Fudgets/">Fudgets</a>
-
 -module(wxi).
 
 -include("wxi.hrl").
@@ -13,7 +10,8 @@
 
 %% Functions for internal use by custom widgets.
 
-%% @doc Compose a subordinate piece of GUI.
+%% @doc Compose a subordinate piece of GUI. List of widgets encodes parallel composition,
+%% tuple of widgets encodes sequential composition.
 
 comp(Sub, C = #context {}) -> if
     is_tuple(Sub) andalso size(Sub) == 1 -> (element(1, Sub))(C);
@@ -40,9 +38,12 @@ linkEvent(Src, Dst, Evts) -> if
     true -> ok
 end.
 
-%% @doc Add the wx widget to its parent w. r. t. parent's sizer.
+%% @doc Add the wx widget to its parent wrt parent's sizer.
 
 addSelf(P, W) -> addSelf(P, W, []).
+
+%% @doc Add the wx widget to its parent wrt parent's sizer with sizer flags explicitly
+%% specified.
 
 addSelf(P, W, F) ->
     S = hasSizer(P),

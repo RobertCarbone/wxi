@@ -1,0 +1,13 @@
+** this is the overview.doc file for the application 'wxi' **
+@author Dmitry Golubovsky <golubovsky@gmail.com>
+@version 0.1
+@title Composable GUI library on top of wxErlang.
+@doc
+The <a href="wxerlang.sourceforge.net">wxErlang</a> package is now official <a href="http://www.erlang.org/doc/man/wx.html" target="_blank">part</a> of the Erlang/OTP distribution. The library itself
+exposes a low level imperative style interface. The <a href="wxi.googlecode.com">wxi</a> library
+provides functional-style composable GUI interface layer on top of wxErlang. The library is based
+on ideas found in the Haskell GUI library <a href="http://www.md.chalmers.se/Cs/Research/Functional/Fudgets/">Fudgets</a>.
+
+@reference <a href="http://www.md.chalmers.se/Cs/Research/Functional/Fudgets/">Fudgets</a>
+
+

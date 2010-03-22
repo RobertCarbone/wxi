@@ -3,3 +3,16 @@ The library itself exposes a low-level imperative interface.
 The wxi library provides a functional-style interface on top of wxErlang. 
 It heavily borrows ideas from Haskell GUI library Fudgets. 
 
+To try it out:
+
+1. Change to the toplevel directory of the library
+2. Start Erlang shell.
+3. Execute make:all([load]).
+4. Execute wxitest:start().
+
+The latter command brings up the minimal demo program.
+
+To regenerate documentation, run in the Erlang shell:
+
+edoc:application(wxi, '.', []).
+
