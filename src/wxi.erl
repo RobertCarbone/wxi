@@ -5,13 +5,16 @@
 
 -include("wxi.hrl").
 
--export([topFrame/4, addSelf/2, addSelf/3, textLabel/2, panel/2, comp/2, passEvent/2,
-         map/1, mapState/2, button/2, modSizerFlags/2, panel/1, linkEvent/3]).
+-export([topFrame/5, addSelf/2, addSelf/3, textLabel/2, panel/2, comp/2, passEvent/2,
+         map/1, maybe/1, mapState/2, button/2, modSizerFlags/2, panel/1, linkEvent/3,
+         never/0, always/0]).
 
 %% Functions for internal use by custom widgets.
 
 %% @doc Compose a subordinate piece of GUI. List of widgets encodes parallel composition,
 %% tuple of widgets encodes sequential composition.
+
+comp({#vbox{}, Sub}, C) -> (wxi:panel(?wxVERTICAL, Sub)) (C);
 
 comp(Sub, C = #context {}) -> if
     is_tuple(Sub) andalso size(Sub) == 1 -> (element(1, Sub))(C);
@@ -71,7 +74,7 @@ end.
 %% @doc Create a toplevel frame (window) with given title, dimensions, and sizer
 %% direction (either vertical or horizontal; wxBoxSizer will be used).
 
-topFrame(Title, X, Y, Dir) -> fun (Sub) ->
+topFrame(Title, X, Y, Dir, Sub) ->
     Wx = wx:new(),
     {Frame, Udata} = wx:batch(fun () ->
         Fr = wxFrame:new(Wx, ?wxID_ANY, Title, [{size, {X, Y}}]),
@@ -85,8 +88,7 @@ topFrame(Title, X, Y, Dir) -> fun (Sub) ->
     wxWindow:show(Frame),
     loop(Frame, Udata),
     wx:destroy(),
-    ok
-end.
+    ok.
 
 %% @doc Create a panel (box) with given sizer direction.
 
@@ -140,6 +142,31 @@ map(F) -> fun (#context {evtlink = E}) ->
         Z = F(R),
         passEvent(Z, E)
     end
+end.
+
+%% @doc Apply the given function to any event received, but pass the event to the event
+%% if the function returns a tuple {'just', E} where E is the value to be passed.
+
+maybe(F) -> fun (#context {evtlink = E}) ->
+    fun (R, _) ->
+    Z = F(R),
+        case Z of
+            {'just', EE} -> passEvent(EE, E);
+            _ -> ok
+        end
+    end
+end.
+
+%% @doc Always pass any event received unchanged.
+
+always() -> fun(#context {evtlink = E}) ->
+    fun (R, _) -> passEvent(R, E) end
+end.
+
+%% @doc Never pass any event.
+
+never() -> fun(#context {}) ->
+    fun (_, _) -> ok end
 end.
 
 %% @doc Apply the given function fo any event received and the encapsulated state.
