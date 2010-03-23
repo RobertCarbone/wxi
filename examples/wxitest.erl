@@ -1,6 +1,6 @@
 -module(wxitest).
 
--include("wxi.hrl").
+-include_lib("wxi.hrl").
 
 -export([start/0]).
 
@@ -22,7 +22,7 @@ start() ->
             {#vbox {}, [wxi:button("+", ?ID_PLUS), wxi:button("-", ?ID_MINUS)]},
             wxi:map(fun (#wx {id = I}) -> I end),
             wxi:mapState(fun (A, B) -> incd(A, B) end, 0),
-            {#vbox {}, [wxi:textLabel("~B", "0"), 
+            {#vbox {}, [{wxi:always(), wxi:textLabel("~B", "0")}, 
                        {wxi:maybe(fun(E) -> p(E) end), wxi:textLabel("~B", "0")}]}}
         ))
     )).

@@ -16,6 +16,8 @@
 
 comp({#vbox{}, Sub}, C) -> (wxi:panel(?wxVERTICAL, Sub)) (C);
 
+comp({#hbox{}, Sub}, C) -> (wxi:panel(?wxHORIZONTAL, Sub)) (C);
+
 comp(Sub, C = #context {}) -> if
     is_tuple(Sub) andalso size(Sub) == 1 -> (element(1, Sub))(C);
     is_tuple(Sub) -> sercomp(lists:reverse(tuple_to_list(Sub)), C, []);
@@ -135,7 +137,7 @@ textLabel(Fmt, T) -> fun (#context {parent = X, szflags = F}) ->
     end
 end.
 
-%% @doc Apply the given function to any event received, and send the recult to the event link.
+%% @doc Apply the given function to any event received, and send the result to the event link.
 
 map(F) -> fun (#context {evtlink = E}) ->
     fun (R, _) ->
@@ -159,9 +161,7 @@ end.
 
 %% @doc Always pass any event received unchanged.
 
-always() -> fun(#context {evtlink = E}) ->
-    fun (R, _) -> passEvent(R, E) end
-end.
+always() -> fun(#context {evtlink = E}) -> E end.
 
 %% @doc Never pass any event.
 
