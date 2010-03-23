@@ -7,5 +7,5 @@
 -export([start/0]).
 
 start() ->
-    wxi:topFrame("WXI Example 1", 200, 100, ?wxHORIZONTAL ,[]).
+    wxi:topFrame("WXI Example 1", 300, 100, ?wxHORIZONTAL ,[]).
 
