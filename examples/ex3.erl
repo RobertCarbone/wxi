@@ -1,4 +1,4 @@
-%% The wxi library example 2: two buttons and message mapper.
+%% The wxi library example 3: two buttons and message mapper.
 
 -module(ex3).
 
