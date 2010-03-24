@@ -1,4 +1,4 @@
-%% The wxi library example 2: empty toplevel frame.
+%% The wxi library example 2: button and text label.
 
 -module(ex2).
 
