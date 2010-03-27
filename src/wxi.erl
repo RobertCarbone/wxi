@@ -7,21 +7,26 @@
 
 -export([topFrame/5, addSelf/2, addSelf/3, textLabel/2, panel/2, comp/2, passEvent/2,
          map/1, maybe/1, mapState/2, button/2, modSizerFlags/2, panel/1, linkEvent/3,
-         never/0, always/0]).
+         never/0, always/0, rcomp/2]).
 
 %% Functions for internal use by custom widgets.
 
 %% @doc Compose a subordinate piece of GUI. List of widgets encodes parallel composition,
 %% tuple of widgets encodes sequential composition.
 
-comp({#vbox{}, Sub}, C) -> (wxi:panel(?wxVERTICAL, Sub)) (C);
-
-comp({#hbox{}, Sub}, C) -> (wxi:panel(?wxHORIZONTAL, Sub)) (C);
-
 comp(Sub, C = #context {}) -> if
     is_tuple(Sub) andalso size(Sub) == 1 -> (element(1, Sub))(C);
     is_tuple(Sub) -> sercomp(lists:reverse(tuple_to_list(Sub)), C, []);
     is_list(Sub) -> parcomp(Sub, C, []);
+    true -> Sub(C)
+end.
+
+%% @doc Same as comp/2, but placement is reversed.
+
+rcomp(Sub, C = #context {}) -> if
+    is_tuple(Sub) andalso size(Sub) == 1 -> (element(1, Sub))(C);
+    is_tuple(Sub) -> sercompr(lists:reverse(tuple_to_list(Sub)), C);
+    is_list(Sub) -> parcomp(lists:reverse(Sub), C, []);
     true -> Sub(C)
 end.
 
@@ -80,9 +85,13 @@ topFrame(Title, X, Y, Dir, Sub) ->
     Wx = wx:new(),
     {Frame, Udata} = wx:batch(fun () ->
         Fr = wxFrame:new(Wx, ?wxID_ANY, Title, [{size, {X, Y}}]),
-        Sz = wxBoxSizer:new(Dir),
+        Sz = wxBoxSizer:new(abs(Dir)),
         wxWindow:setSizer(Fr, Sz),
-        Ud = comp(Sub, #context {parent=Fr, 
+        F = if
+            Dir > 0 -> fun ?MODULE:comp/2;
+            true -> fun ?MODULE:rcomp/2
+        end,
+        Ud = F(Sub, #context {parent=Fr, 
                            szflags=[{proportion, 1}, {flag, 0}, {border, 0}]}),
         wxFrame:connect(Fr, close_window),
         {Fr, Ud}
@@ -96,9 +105,12 @@ topFrame(Title, X, Y, Dir, Sub) ->
 
 panel(Dir, Sub) -> fun(C = #context{parent = X, szflags = F}) ->
     P = wxPanel:new(X),
-    Sz = wxBoxSizer:new(Dir),
+    Sz = wxBoxSizer:new(abs(Dir)),
     wxWindow:setSizer(P, Sz),
-    Ud = comp(Sub, C#context{parent = P}),
+    Ud = if
+      Dir > 0 -> comp(Sub, C#context{parent = P});
+      true -> rcomp(Sub, C#context{parent = P})
+    end,
     addSelf(X, P, F),
     Ud
 end.
@@ -206,6 +218,13 @@ sercomp([H|T], X = #context {parent = P}, Pns) ->
     end,
     sercomp(T, X#context {evtlink = Z}, Pnss).
 
+sercompr([H], X = #context {}) ->
+    comp(H, X);
+
+sercompr([H|T], X = #context {}) ->
+    Z = comp(H, X),
+    sercompr(T, X#context {evtlink = Z}).
+
 parcomp([], _, Els) -> fun (R, _) -> 
     F = fun (D) -> passEvent(R, D) end,
     lists:foreach(F, Els)
@@ -222,7 +241,7 @@ hasSizer(F) ->
         _ -> false
     end.
 
- loop(Frame, Udata) ->
+loop(Frame, Udata) ->
     receive
         #wx{event=#wxClose{}} ->
             io:format("~p Closing window ~n",[self()]),

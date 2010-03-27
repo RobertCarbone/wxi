@@ -2,6 +2,4 @@
 
 -record(context, {parent, evtlink, szflags}).
 
--record(vbox, {}).
--record(hbox, {}).
 
