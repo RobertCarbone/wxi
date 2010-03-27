@@ -12,7 +12,8 @@
 %% Functions for internal use by custom widgets.
 
 %% @doc Compose a subordinate piece of GUI. List of widgets encodes parallel composition,
-%% tuple of widgets encodes sequential composition.
+%% tuple of widgets encodes sequential composition. This function is intended to be called
+%% from within the creation phase code of a widget having subordinates (e. g. panel).
 
 comp(Sub, C = #context {}) -> if
     is_tuple(Sub) andalso size(Sub) == 1 -> (element(1, Sub))(C);
@@ -69,7 +70,8 @@ addSelf(P, W, F) ->
 %% Functions to manipulate the context.
 
 %% @doc Modify sizer flags in the context. All subordinate widgets will use the modified
-%% context.
+%% context. This widget only allows normal order of subordinates placement although
+%% orientation is inherited from the parent.
 
 modSizerFlags(F, Sub) -> fun (C = #context {szflags = T}) ->
     Tm = lists:keymerge(1, F, T),
@@ -79,7 +81,10 @@ end.
 %% Basic widgets.
 
 %% @doc Create a toplevel frame (window) with given title, dimensions, and sizer
-%% direction (either vertical or horizontal; wxBoxSizer will be used).
+%% orientation (either vertical or horizontal; wxBoxSizer will be used). This widget honors 
+%% the sign of the orientation flag: negative values cause reverse order of placement 
+%% (right to left for <tt>?wxHORIZONTAL</tt>, and bottom to top for <tt>?wxVERTICAL</tt>).
+
 
 topFrame(Title, X, Y, Dir, Sub) ->
     Wx = wx:new(),
@@ -101,7 +106,10 @@ topFrame(Title, X, Y, Dir, Sub) ->
     wx:destroy(),
     ok.
 
-%% @doc Create a panel (box) with given sizer direction.
+%% @doc Create a panel (box) with given sizer orientation (either vertical or horizontal; 
+%% wxBoxSizer will be used). This widget honors the sign of the orientation flag: negative
+%% values cause reverse order of placement (right to left for <tt>?wxHORIZONTAL</tt>,
+%% and bottom to top for <tt>?wxVERTICAL</tt>).
 
 panel(Dir, Sub) -> fun(C = #context{parent = X, szflags = F}) ->
     P = wxPanel:new(X),
