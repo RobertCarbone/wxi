@@ -7,7 +7,7 @@
 
 -export([topFrame/5, addSelf/2, addSelf/3, textLabel/2, panel/2, comp/2, passEvent/2,
          map/1, maybe/1, mapState/2, button/2, modSizerFlags/2, panel/1, linkEvent/3,
-         never/0, always/0, rcomp/2]).
+         never/0, always/0, rcomp/2, grid/2]).
 
 %% Functions for internal use by custom widgets.
 
@@ -132,6 +132,21 @@ panel(Sub) -> fun(C = #context{parent = X, szflags = F}) ->
     Ud
 end.
 
+%% @doc Create a panel with GridSizer. Number of columns
+%% is specified upon creation; rows are added automatically
+%% as children are added. This widget does not allow reverse
+%% placement of its subordinates.
+
+grid(Cols, Sub) -> fun(C = #context{parent = X, szflags = F}) ->
+    P = wxPanel:new(X),
+    Sz = wxGridSizer:new(Cols),
+    wxWindow:setSizer(P, Sz),
+    Ud = comp(Sub, C#context{parent = P}),
+    addSelf(X, P, F),
+    Ud
+end.
+
+
 %% @doc Create a button with given label and numeric ID. Mouse clicks on the button
 %% will cause a <tt>command_button_clicked</tt> message to be passed to its event link.
 
@@ -148,12 +163,18 @@ end.
 
 textLabel(Fmt, T) -> fun (#context {parent = X, szflags = F}) ->
     Tx = wxStaticText:new(X, -1, T),
+    wxStaticText:wrap(Tx, -1),
     addSelf(X, Tx, F),
     fun(R, _) ->
         Z = io_lib:format(Fmt, [R]),
         wxStaticText:setLabel(Tx, Z),
         wxWindow:fit(X),
-        ok
+        P = wxWindow:getParent(X),
+        if
+          P /= null -> wxWindow:fit(P),
+                       ok;
+          true -> ok
+        end
     end
 end.
 
@@ -252,7 +273,6 @@ hasSizer(F) ->
 loop(Frame, Udata) ->
     receive
         #wx{event=#wxClose{}} ->
-            io:format("~p Closing window ~n",[self()]),
             wxWindow:destroy(Frame),
             ok;
         Msg ->
