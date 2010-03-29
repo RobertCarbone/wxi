@@ -242,7 +242,7 @@ sercomp([H|T], X = #context {parent = P}, Pns) ->
     Z = comp(H, X#context {parent = Pn}),
     Ch = wxWindow:getChildren(Pn),
     Pnss = if
-      length(Ch) == 0 -> Pns;
+      length(Ch) == 0 -> wxWindow:destroy(Pn), Pns;
       true -> [Pn|Pns]
     end,
     sercomp(T, X#context {evtlink = Z}, Pnss).
