@@ -29,7 +29,7 @@ start() ->
 
 logic() -> {wxi:map(fun (#wx {id = I}) -> I end), 
             wxi:mapState(fun (K, S) -> calc(K, S) end, initstate()),
-            wxi:map(fun (#calcst {disp = S}) -> S end)}.
+            wxi:map(fun (#calcst {disp = S, clr = C}) -> if C -> rmtz(S); true -> S end end)}.
 
 keyboard() -> wxi:modSizerFlags([{proportion, 5},
                                  {border, 5},
@@ -57,6 +57,15 @@ calc(K, S = #calcst{}) -> if
           Dp -> [$-|Dp]
         end,
         S#calcst {disp = Dpx, clr = true};
+    K == ?BTN_INV -> 
+        {ok, [Disp], _} = io_lib:fread("~f", S#calcst.disp ++ case S#calcst.dot of
+                  true -> "0";
+                  false -> ".0"
+              end),
+        if
+            Disp == 0 -> (initstate())#calcst {disp = "Error"};
+            true -> S#calcst {clr = true, disp = lists:flatten(io_lib:format("~f", [1.0/Disp]))}
+        end;
     K == ?BTN_EQU ->
         calc_op(S);
     K >= ?BTN_PLUS andalso K =< ?BTN_DIV ->
@@ -70,8 +79,8 @@ calc(K, S = #calcst{}) -> if
         D1 = D0 ++ [($0 + K)],
         S#calcst {disp = D1, clr = false, dot = Dot};
     K == ?BTN_DOT -> if
-            S#calcst.dot -> S;
             S#calcst.clr -> S#calcst {disp = "0.", dot = true, clr = false};
+            S#calcst.dot -> S;
             true -> S#calcst {disp = S#calcst.disp ++ ".", dot = true}
         end;
     true -> S
@@ -88,14 +97,26 @@ calc_op(S = #calcst{}) ->
                  ?BTN_PLUS -> S#calcst.accum + Disp;
                  ?BTN_MINUS -> S#calcst.accum - Disp;
                  ?BTN_MULT -> S#calcst.accum * Disp;
-                 ?BTN_DIV -> S#calcst.accum / Disp;
+                 ?BTN_DIV -> if
+                     Disp == 0 -> error;
+                     true -> S#calcst.accum / Disp
+                 end;
                  null -> Disp
              end,
-             S#calcst {clr = true, 
-                       accum = Res, 
-                       act = null,
-                       disp = lists:flatten(io_lib:format("~f", [Res]))}
+             if
+                 Res == error -> (initstate())#calcst {disp = "Error"};
+                 true -> S#calcst {clr = true, 
+                                   accum = Res, 
+                                   act = null,
+                                   disp = lists:flatten(io_lib:format("~f", [Res]))}
+             end
     end.
 
-
+rmtz(S) -> 
+    Sz = re:replace(S, "\\.00*$", ""),
+    D = lists:member($., Sz),
+    if
+        D -> re:replace(Sz, "0*$", "");
+        true -> Sz
+end.
 
