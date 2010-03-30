@@ -7,7 +7,7 @@
 
 -export([topFrame/5, addSelf/2, addSelf/3, textLabel/2, panel/2, comp/2, passEvent/2,
          map/1, maybe/1, mapState/2, button/2, modSizerFlags/2, panel/1, linkEvent/3,
-         never/0, always/0, rcomp/2, grid/2]).
+         never/0, always/0, rcomp/2, grid/2, catchEvents/1]).
 
 %% Functions for internal use by custom widgets.
 
@@ -137,7 +137,7 @@ end.
 %% as children are added. This widget does not allow reverse
 %% placement of its subordinates.
 
-grid(Cols, Sub) -> fun(C = #context{parent = X, szflags = F}) ->
+grid(Cols, Sub) -> fun (C = #context{parent = X, szflags = F}) ->
     P = wxPanel:new(X),
     Sz = wxGridSizer:new(Cols),
     wxWindow:setSizer(P, Sz),
@@ -146,6 +146,12 @@ grid(Cols, Sub) -> fun(C = #context{parent = X, szflags = F}) ->
     Ud
 end.
 
+%% @doc Connect the parent to the list of events.
+
+catchEvents(Es) -> fun (#context{parent = X, evtlink = E}) ->
+    linkEvent(X, E, Es),
+    ok
+end.
 
 %% @doc Create a button with given label and numeric ID. Mouse clicks on the button
 %% will cause a <tt>command_button_clicked</tt> message to be passed to its event link.

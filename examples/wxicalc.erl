@@ -25,7 +25,25 @@ initstate() -> #calcst{accum = null, disp = "0", act = null, clr = true, dot = f
 
 start() -> 
     wxi:topFrame("Calculator", 400, 400, ?wxHORIZONTAL,
-            wxi:panel(-?wxVERTICAL, {keyboard(), logic(), display()})).
+            {wxi:catchEvents([key_up]), wxi:maybe(fun (E) -> key2btn(E) end), 
+             wxi:panel(-?wxVERTICAL, {[wxi:always(), keyboard()], logic(), display()})}).
+
+key2btn(#wx {event = #wxKey {uniChar = C}}) -> case C of
+    $1 -> {just, #wx {id = 1}};
+    $2 -> {just, #wx {id = 2}};
+    $3 -> {just, #wx {id = 3}};
+    $4 -> {just, #wx {id = 4}};
+    $5 -> {just, #wx {id = 5}};
+    $6 -> {just, #wx {id = 6}};
+    $7 -> {just, #wx {id = 7}};
+    $8 -> {just, #wx {id = 8}};
+    $9 -> {just, #wx {id = 9}};
+    $0 -> {just, #wx {id = 0}};
+    15 -> {just, #wx {id = ?BTN_EQU}};
+    $+ -> {just, #wx {id = ?BTN_PLUS}};
+    _ -> nothing
+end;
+key2btn(_) -> nothing.
 
 logic() -> {wxi:map(fun (#wx {id = I}) -> I end), 
             wxi:mapState(fun (K, S) -> calc(K, S) end, initstate()),
