@@ -1,8 +1,15 @@
+%% An example of an infix calculator written with the wxi library.
+%% This example illustrates use of various widgets provided with the library
+%% as well as methods to connect widgets and route messages.
+
 -module(wxicalc).
 
 -include_lib("wxi.hrl").
 
 -export([start/0]).
+
+%% Define numeric identifiers for calculator buttons. Numeric buttons get identifiers
+%% equal to corresponding numbers.
 
 -define(BTN_PLUS, 100).
 -define(BTN_MINUS, 101).
@@ -15,17 +22,35 @@
 -define(BTN_DOT, 108).
 -define(BTN_INV, 109).
 
--record(calcst, {accum :: float(), 
-                 disp :: string(), 
-                 act :: integer(), 
-                 clr :: boolean(), 
-                 dot :: boolean()}).
+%% Define a record for calculator state.
+
+-record(calcst, {accum :: float(),             % accumulator to store the result
+                 disp :: string(),             % calculator numeric display
+                 act :: integer(),             % action (arithmetic operation) remembered
+                 clr :: boolean(),             % clear the display upon user input
+                 dot :: boolean()}).           % display contains decimal dot
+
+%% Initial state of the calculator.
 
 initstate() -> #calcst{accum = null, disp = "0", act = null, clr = true, dot = false}.
 
+%% Start the calculator. This function defines the "toplevel wiring" among the components
+%% of the calculator.
+
 start() -> 
+
+%% Define the toplevel window:
+
     wxi:topFrame("Calculator", 400, 400, ?wxHORIZONTAL,
+
+%% Make the window send key events and map key events to simulated button events:
+
             {wxi:catchEvents([key_up]), wxi:maybe(fun (E) -> key2btn(E) end), 
+
+%% Place the keyboard and the display (note the reverse direction: 
+%% the display is above the keyboard. Use wxi:always() to "short-circuit" the
+%% keyboard widget so mapped key events are multiplexed with button events.
+
              wxi:panel(-?wxVERTICAL, {[wxi:always(), keyboard()], logic(), display()})}).
 
 key2btn(#wx {event = #wxKey {uniChar = C}}) -> case C of
@@ -70,6 +95,7 @@ display() -> wxi:modSizerFlags([{proportion, 1},
     wxi:panel(?wxHORIZONTAL, {wxi:textLabel("~s", "0")})).
 
 calc(K, S = #calcst{}) -> if
+    S#calcst.disp == "Error" -> initstate();
     K == ?BTN_CLR ->
         initstate();
     K == ?BTN_ERA ->
@@ -81,11 +107,8 @@ calc(K, S = #calcst{}) -> if
         end,
         S#calcst {disp = Dpx, clr = true};
     K == ?BTN_INV -> 
-        {ok, [Disp], _} = io_lib:fread("~f", S#calcst.disp ++ case S#calcst.dot of
-                  true -> "0";
-                  false -> ".0"
-              end),
-        if
+         Disp = readdisp(S),
+         if
             Disp == 0 -> (initstate())#calcst {disp = "Error"};
             true -> S#calcst {clr = true, disp = lists:flatten(io_lib:format("~f", [1.0/Disp]))}
         end;
@@ -109,11 +132,15 @@ calc(K, S = #calcst{}) -> if
     true -> S
 end.
 
-calc_op(S = #calcst{}) -> 
+readdisp(S = #calcst{}) ->
     {ok, [Disp], _} = io_lib:fread("~f", S#calcst.disp ++ case S#calcst.dot of
                true -> "0";
                false -> ".0"
            end),
+    Disp.
+
+calc_op(S = #calcst{}) -> 
+    Disp = readdisp(S),
     case S#calcst.accum of
         null -> S#calcst {clr = true, accum = Disp};
         _ -> Res = case S#calcst.act of
