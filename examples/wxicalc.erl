@@ -39,8 +39,13 @@ key2btn(#wx {event = #wxKey {uniChar = C}}) -> case C of
     $8 -> {just, #wx {id = 8}};
     $9 -> {just, #wx {id = 9}};
     $0 -> {just, #wx {id = 0}};
-    15 -> {just, #wx {id = ?BTN_EQU}};
-    $+ -> {just, #wx {id = ?BTN_PLUS}};
+    387 -> {just, #wx {id = ?BTN_MULT}};
+    392 -> {just, #wx {id = ?BTN_DIV}};
+    390 -> {just, #wx {id = ?BTN_MINUS}};
+    388 -> {just, #wx {id = ?BTN_PLUS}};
+    46 -> {just, #wx {id = ?BTN_DOT}};
+    61 -> {just, #wx {id = ?BTN_EQU}};
+    27 -> {just, #wx {id = ?BTN_CLR}};
     _ -> nothing
 end;
 key2btn(_) -> nothing.
