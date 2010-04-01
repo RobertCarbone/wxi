@@ -8,8 +8,8 @@
 
 -export([start/0]).
 
-%% Define numeric identifiers for calculator buttons. Numeric buttons get identifiers
-%% equal to corresponding numbers.
+%% Define numeric identifiers for calculator buttons - operations. 
+%% Numeric buttons get identifiers 0 to 9.
 
 -define(BTN_PLUS, 100).
 -define(BTN_MINUS, 101).
@@ -47,13 +47,22 @@ start() ->
 
             {wxi:catchEvents([key_up]), wxi:maybe(fun (E) -> key2btn(E) end), 
 
-%% Place the keyboard and the display (note the reverse direction: 
-%% the display is above the keyboard. Use wxi:always() to "short-circuit" the
-%% keyboard widget so mapped key events are multiplexed with button events.
+%% Place the button pad and the display (note the reverse direction: 
+%% the display is above the button pad. Use wxi:always() to "short-circuit" the
+%% button pad widget so mapped key events are multiplexed with button events.
+%% The calculator logics unit receives events from both key presses and buttons.
+%% Output of the calculator logics unit is fed into the display.
 
-             wxi:panel(-?wxVERTICAL, {[wxi:always(), keyboard()], logic(), display()})}).
+             wxi:panel(-?wxVERTICAL, {[wxi:always(), btnpad()], logic(), display()})}).
+
+%% Map events originating from key presses are mapped to button click events
+%% by creating a fake #wx record with proper id. Not all possible keys are mapped
+%% in this example, but the idea must be clear. Note that all returned values
+%% are tuples tagged with 'just': the result will be processed by the wxi:maybe
+%% widget.
 
 key2btn(#wx {event = #wxKey {uniChar = C}}) -> case C of
+    $0 -> {just, #wx {id = 0}};               % 0 - 9 of the upper keys row
     $1 -> {just, #wx {id = 1}};
     $2 -> {just, #wx {id = 2}};
     $3 -> {just, #wx {id = 3}};
@@ -63,10 +72,9 @@ key2btn(#wx {event = #wxKey {uniChar = C}}) -> case C of
     $7 -> {just, #wx {id = 7}};
     $8 -> {just, #wx {id = 8}};
     $9 -> {just, #wx {id = 9}};
-    $0 -> {just, #wx {id = 0}};
-    387 -> {just, #wx {id = ?BTN_MULT}};
-    392 -> {just, #wx {id = ?BTN_DIV}};
-    390 -> {just, #wx {id = ?BTN_MINUS}};
+    387 -> {just, #wx {id = ?BTN_MULT}};      % * on the numpad
+    392 -> {just, #wx {id = ?BTN_DIV}};       % / on the numpad
+    390 -> {just, #wx {id = ?BTN_MINUS}};     % etc.
     388 -> {just, #wx {id = ?BTN_PLUS}};
     46 -> {just, #wx {id = ?BTN_DOT}};
     61 -> {just, #wx {id = ?BTN_EQU}};
@@ -75,13 +83,24 @@ key2btn(#wx {event = #wxKey {uniChar = C}}) -> case C of
 end;
 key2btn(_) -> nothing.
 
+%% The calculator logics unit: extract id from an event, process the event keeping
+%% internal state between events, remove trailing zeros from the part right
+%% of the decimal dot, if present. The resulting value is ready for display.
+
 logic() -> {wxi:map(fun (#wx {id = I}) -> I end), 
             wxi:mapState(fun (K, S) -> calc(K, S) end, initstate()),
             wxi:map(fun (#calcst {disp = S, clr = C}) -> if C -> rmtz(S); true -> S end end)}.
 
-keyboard() -> wxi:modSizerFlags([{proportion, 5},
+%% The button pad widget. Note the 'proportion' sizer flag: buttons take 5 rows while
+%% the display takes one (see below).
+
+btnpad() -> wxi:modSizerFlags([{proportion, 5},
                                  {border, 5},
                                  {flag, ?wxALL bor ?wxALIGN_LEFT bor ?wxALIGN_CENTER_VERTICAL}], 
+
+%% Buttons are created from a list comprehension and parallel-composed, thus
+%% all events from button clicks will be multiplexed. Grid sizer is used.
+
     wxi:grid(4, [wxi:button(L, I) || {I, L} <- [
         {?BTN_NEG, "+/-"}, {?BTN_CLR, "C"}, {?BTN_ERA, "CE"}, {?BTN_INV, "1/x"},
         {7, "7"}, {8, "8"}, {9, "9"}, {?BTN_MULT, "*"},
@@ -89,10 +108,16 @@ keyboard() -> wxi:modSizerFlags([{proportion, 5},
         {1, "1"}, {2, "2"}, {3, "3"}, {?BTN_PLUS,  "+"},
         {0, "0"}, {?BTN_DOT, "."}, {?BTN_EQU, "="}, {?BTN_MINUS, "-"}]])).
 
+%% The display widget. Just a static text field that can be updated by incoming events.
+
 display() -> wxi:modSizerFlags([{proportion, 1},
                                 {border, 5},
                                 {flag, ?wxALL bor ?wxALIGN_RIGHT bor ?wxALIGN_CENTER_VERTICAL}], 
     wxi:panel(?wxHORIZONTAL, {wxi:textLabel("~s", "0")})).
+
+%% The function from the current state and incoming event to the new state.
+%% The wxi:mapState widget takes care of remembering the state (as an infinitely
+%% recursive process holding state in its local variables).
 
 calc(K, S = #calcst{}) -> if
     S#calcst.disp == "Error" -> initstate();
@@ -110,7 +135,7 @@ calc(K, S = #calcst{}) -> if
          Disp = readdisp(S),
          if
             Disp == 0 -> (initstate())#calcst {disp = "Error"};
-            true -> S#calcst {clr = true, disp = lists:flatten(io_lib:format("~f", [1.0/Disp]))}
+            true -> S#calcst {clr = true, disp = fmtdisp(1.0/Disp)}
         end;
     K == ?BTN_EQU ->
         calc_op(S);
@@ -132,12 +157,20 @@ calc(K, S = #calcst{}) -> if
     true -> S
 end.
 
+%% Read the numeric display (add decimal dot and trailing zero if needed for the ~f format).
+
 readdisp(S = #calcst{}) ->
     {ok, [Disp], _} = io_lib:fread("~f", S#calcst.disp ++ case S#calcst.dot of
                true -> "0";
                false -> ".0"
            end),
     Disp.
+
+%% Format a value for the display.
+
+fmtdisp(Res) -> lists:flatten(io_lib:format("~f", [Res])).
+
+%% Process an arithmetic operation.
 
 calc_op(S = #calcst{}) -> 
     Disp = readdisp(S),
@@ -158,15 +191,17 @@ calc_op(S = #calcst{}) ->
                  true -> S#calcst {clr = true, 
                                    accum = Res, 
                                    act = null,
-                                   disp = lists:flatten(io_lib:format("~f", [Res]))}
+                                   disp = fmtdisp(Res)}
              end
     end.
 
+%% Remove trailing zeros.
+
 rmtz(S) -> 
-    Sz = re:replace(S, "\\.00*$", ""),
-    D = lists:member($., Sz),
-    if
-        D -> re:replace(Sz, "0*$", "");
+    Sz = re:replace(S, "\\.00*$", ""),             % for 123.000
+    D = lists:member($., Sz),                      % otherwise, if a decimal dot
+    if                                             % is still there e. g. 123.400,
+        D -> re:replace(Sz, "0*$", "");            % remove trailing zeros.
         true -> Sz
 end.
 
