@@ -7,7 +7,7 @@
 
 -export([topFrame/5, addSelf/2, addSelf/3, textLabel/2, panel/2, comp/2, passEvent/2,
          map/1, maybe/1, mapState/2, button/2, modSizerFlags/2, panel/1, linkEvent/3,
-         never/0, always/0, rcomp/2, grid/2, catchEvents/1]).
+         never/0, always/0, rcomp/2, grid/2, catchEvents/1, catchEvents/2]).
 
 %% Functions for internal use by custom widgets.
 
@@ -149,6 +149,16 @@ end.
 %% @doc Connect the parent to the list of events.
 
 catchEvents(Es) -> fun (#context{parent = X, evtlink = E}) ->
+    linkEvent(X, E, Es),
+    ok
+end.
+
+%% @doc Connect the parent to the list of events explicitly setting parent window Id.
+%% This may be useful when setting events capture for a panel which was created
+%% without window Id specified.
+
+catchEvents(Es, Id) -> fun (#context{parent = X, evtlink = E}) ->
+    wxWindow:setId(X, Id),
     linkEvent(X, E, Es),
     ok
 end.
